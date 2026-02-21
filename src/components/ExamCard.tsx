@@ -1,6 +1,6 @@
 import React from 'react';
 import { format, differenceInDays } from 'date-fns';
-import { Calendar, MapPin, Target, CheckCircle2, Clock, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Target, CheckCircle2, Clock, Edit2, Trash2, Award, XCircle, CheckCircle } from 'lucide-react';
 import { Exam, ExamStatus } from '../types';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
@@ -14,9 +14,8 @@ interface ExamCardProps {
 
 export const ExamCard: React.FC<ExamCardProps> = ({ exam, onEdit, onDelete, onToggleTopic }) => {
   const daysRemaining = differenceInDays(new Date(exam.date), new Date());
-  const completedTopics = exam.topics.filter(t => t.isCompleted).length;
-  const progress = exam.topics.length > 0 ? (completedTopics / exam.topics.length) * 100 : 0;
-
+  const isFail = exam.grade === 'F';
+  
   const getStatusColor = (status: ExamStatus) => {
     switch (status) {
       case ExamStatus.UPCOMING: return 'text-blue-600 bg-blue-50 border-blue-100';
@@ -32,7 +31,10 @@ export const ExamCard: React.FC<ExamCardProps> = ({ exam, onEdit, onDelete, onTo
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="group relative bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300"
+      className={cn(
+        "group relative bg-white rounded-3xl border p-6 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300",
+        isFail ? "border-rose-200 bg-rose-50/30" : "border-slate-200"
+      )}
     >
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
@@ -41,7 +43,12 @@ export const ExamCard: React.FC<ExamCardProps> = ({ exam, onEdit, onDelete, onTo
             style={{ backgroundColor: exam.color }}
           />
           <div>
-            <h3 className="text-xl font-bold text-slate-900 tracking-tight">{exam.subject}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">{exam.subject}</h3>
+              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">
+                {exam.examType}
+              </span>
+            </div>
             <span className={cn(
               "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border mt-1",
               getStatusColor(exam.status)
@@ -70,7 +77,7 @@ export const ExamCard: React.FC<ExamCardProps> = ({ exam, onEdit, onDelete, onTo
       <div className="space-y-3 mb-6">
         <div className="flex items-center gap-2 text-slate-500 text-sm">
           <Calendar size={16} className="text-slate-400" />
-          <span>{format(new Date(exam.date), 'PPP p')}</span>
+          <span>{format(new Date(exam.date), 'PPP')}</span>
         </div>
         {exam.location && (
           <div className="flex items-center gap-2 text-slate-500 text-sm">
@@ -78,33 +85,55 @@ export const ExamCard: React.FC<ExamCardProps> = ({ exam, onEdit, onDelete, onTo
             <span>{exam.location}</span>
           </div>
         )}
-        {exam.targetGrade && (
-          <div className="flex items-center gap-2 text-slate-500 text-sm">
-            <Target size={16} className="text-slate-400" />
-            <span>Target: <span className="font-semibold text-slate-700">{exam.targetGrade}</span></span>
-          </div>
-        )}
       </div>
 
-      <div className="space-y-2">
-        <div className="flex justify-between text-xs font-medium text-slate-500">
-          <span>Study Progress</span>
-          <span>{Math.round(progress)}%</span>
+      {/* Performance Grid */}
+      {exam.totalMarks !== undefined && (
+        <div className="grid grid-cols-3 gap-2 mb-6">
+          <div className="bg-slate-50 p-3 rounded-2xl text-center">
+            <p className="text-[10px] font-bold text-slate-400 uppercase">Total</p>
+            <p className="text-lg font-bold text-slate-700">{exam.totalMarks}</p>
+          </div>
+          <div className="bg-emerald-50 p-3 rounded-2xl text-center">
+            <p className="text-[10px] font-bold text-emerald-400 uppercase">Correct</p>
+            <p className="text-lg font-bold text-emerald-600">{exam.correctAnswers}</p>
+          </div>
+          <div className="bg-rose-50 p-3 rounded-2xl text-center">
+            <p className="text-[10px] font-bold text-rose-400 uppercase">Wrong</p>
+            <p className="text-lg font-bold text-rose-600">{exam.wrongAnswers}</p>
+          </div>
         </div>
-        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            className="h-full bg-brand-500 rounded-full"
-          />
+      )}
+
+      {/* Obtained Marks Banner */}
+      {exam.obtainedMarks !== undefined && (
+        <div className={cn(
+          "p-4 rounded-2xl mb-6 flex items-center justify-between shadow-lg",
+          isFail ? "bg-rose-600 shadow-rose-200" : "bg-brand-600 shadow-brand-200"
+        )}>
+          <div className="flex items-center gap-3 text-white">
+            <div className="p-2 bg-white/10 rounded-lg">
+              <Award size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-white/60 uppercase">Obtained Marks</p>
+              <p className="text-xl font-black">{exam.obtainedMarks.toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="text-right text-white">
+            <p className="text-[10px] font-bold text-white/60 uppercase">Grade</p>
+            <p className="text-xl font-black">
+              {exam.grade}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="mt-6 pt-6 border-t border-slate-100">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Key Topics</h4>
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Selected Chapters</h4>
           <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded">
-            {completedTopics}/{exam.topics.length}
+            {exam.topics.length} Chapters
           </span>
         </div>
         <div className="space-y-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
@@ -112,18 +141,19 @@ export const ExamCard: React.FC<ExamCardProps> = ({ exam, onEdit, onDelete, onTo
             <button
               key={topic.id}
               onClick={() => onToggleTopic(exam.id, topic.id)}
-              className="w-full flex items-center gap-2 text-sm text-slate-600 hover:bg-slate-50 p-1.5 rounded-lg transition-colors text-left"
+              className={cn(
+                "w-full flex items-center gap-2 text-xs p-2 rounded-lg transition-all",
+                topic.isCompleted 
+                  ? "text-slate-600 bg-slate-50" 
+                  : "text-slate-400 bg-slate-50/50 opacity-60"
+              )}
             >
-              <CheckCircle2 
-                size={16} 
-                className={cn(
-                  "transition-colors",
-                  topic.isCompleted ? "text-emerald-500 fill-emerald-50" : "text-slate-300"
-                )} 
-              />
-              <span className={cn(topic.isCompleted && "line-through text-slate-400")}>
-                {topic.name}
-              </span>
+              {topic.isCompleted ? (
+                <CheckCircle size={14} className="text-emerald-500" />
+              ) : (
+                <XCircle size={14} className="text-slate-300" />
+              )}
+              <span className={cn("truncate", !topic.isCompleted && "line-through")}>{topic.name}</span>
             </button>
           ))}
         </div>

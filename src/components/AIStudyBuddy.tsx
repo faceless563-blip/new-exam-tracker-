@@ -4,6 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 import { Exam } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
+import { cn } from '../lib/utils';
 
 interface AIStudyBuddyProps {
   exams: Exam[];
@@ -26,14 +27,16 @@ export const AIStudyBuddy: React.FC<AIStudyBuddyProps> = ({ exams }) => {
       
       const examData = exams.map(e => ({
         subject: e.subject,
+        type: e.examType,
         date: e.date,
-        topics: e.topics.map(t => t.name),
-        progress: e.topics.filter(t => t.isCompleted).length / e.topics.length
+        grade: e.grade,
+        accuracy: e.totalMarks ? (e.obtainedMarks! / e.totalMarks! * 100) : 0,
+        topics: e.topics.map(t => t.name)
       }));
 
       const prompt = type === 'tips' 
-        ? `Based on these upcoming exams: ${JSON.stringify(examData)}, give me 5 highly specific, actionable study tips to maximize my efficiency. Focus on the exams that are closest or have the least progress.`
-        : `Create a detailed weekly study plan for these exams: ${JSON.stringify(examData)}. Break it down by day and suggest which topics to focus on based on their proximity and current progress.`;
+        ? `Based on these GST exam records: ${JSON.stringify(examData)}, identify my weakest subjects and chapters (those with low grades or accuracy). Provide 5 highly specific, actionable study tips to improve in those areas. Focus on the negative marking system (1 mark deduction for every 4 wrong answers).`
+        : `Create a detailed weekly study plan for these GST exams: ${JSON.stringify(examData)}. Prioritize the weakest chapters and subjects. Break it down by day and suggest specific practice strategies for V.QB, GST QB, and PH EXAM types.`;
 
       const response = await ai.models.generateContent({
         model,
@@ -51,7 +54,11 @@ export const AIStudyBuddy: React.FC<AIStudyBuddyProps> = ({ exams }) => {
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-      <div className="p-6 bg-gradient-to-br from-brand-600 to-indigo-700 text-white">
+      <div className={cn(
+        "p-6 text-white transition-all duration-500",
+        "bg-gradient-to-br from-brand-600 to-indigo-700",
+        "[[data-theme='cyberpunk']_&]:from-brand-600 [[data-theme='cyberpunk']_&]:to-black"
+      )}>
         <div className="flex items-center gap-3 mb-2">
           <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
             <Sparkles size={24} className="text-brand-100" />

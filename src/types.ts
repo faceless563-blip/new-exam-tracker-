@@ -4,23 +4,36 @@ export enum ExamStatus {
   CANCELLED = 'CANCELLED'
 }
 
+export enum ExamType {
+  V_QB = 'V.QB',
+  GST_QB = 'GST QB',
+  PH_EXAM = 'PH EXAM'
+}
+
 export interface Topic {
   id: string;
   name: string;
   isCompleted: boolean;
+  isChapter?: boolean;
 }
 
 export interface Exam {
   id: string;
-  subject: string;
+  subject: 'Physics' | 'Chemistry' | 'Mathematics' | string;
+  examType: ExamType;
   date: string; // ISO string
   location?: string;
   status: ExamStatus;
   targetGrade?: string;
   actualGrade?: string;
-  topics: Topic[];
+  grade?: string;
+  topics: Topic[]; // Used for selected chapters
   notes?: string;
   color: string;
+  totalMarks?: number;
+  correctAnswers?: number;
+  wrongAnswers?: number;
+  obtainedMarks?: number;
 }
 
 export interface StudySession {
@@ -29,4 +42,17 @@ export interface StudySession {
   date: string;
   durationMinutes: number;
   notes?: string;
+}
+
+export interface ChapterProgress {
+  subject: string;
+  chapterName: string;
+  isClassDone: boolean;
+  isUniQBDone: boolean;
+  isGSTQBDone: boolean;
+  completedAt?: string; // ISO string when all 3 are done
+  firstRevisionAt?: string; // ISO string when 1st revision is done
+  secondRevisionAt?: string; // ISO string when 2nd revision is done
+  scheduledFirstRevisionAt?: string; // ISO string
+  scheduledSecondRevisionAt?: string; // ISO string
 }

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Save } from 'lucide-react';
-import { Exam, ExamStatus, Topic } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Plus, Trash2, Save, AlertCircle, CheckCircle2, BookOpen } from 'lucide-react';
+import { Exam, ExamStatus, Topic, ExamType } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { NCTB_CURRICULUM, SUBJECTS, EXAM_TYPES } from '../constants';
 
 interface ExamFormProps {
   exam?: Exam | null;
@@ -16,36 +17,86 @@ const COLORS = [
 ];
 
 export const ExamForm: React.FC<ExamFormProps> = ({ exam, onSave, onClose }) => {
-  const [subject, setSubject] = useState(exam?.subject || '');
-  const [date, setDate] = useState(exam?.date ? exam.date.slice(0, 16) : '');
+  const [subject, setSubject] = useState<string>(exam?.subject || '');
+  const [examType, setExamType] = useState<ExamType>(exam?.examType || ExamType.V_QB);
+  const [date, setDate] = useState(exam?.date ? exam.date.slice(0, 10) : formatToday());
   const [location, setLocation] = useState(exam?.location || '');
-  const [status, setStatus] = useState<ExamStatus>(exam?.status || ExamStatus.UPCOMING);
-  const [targetGrade, setTargetGrade] = useState(exam?.targetGrade || '');
+  const [status, setStatus] = useState<ExamStatus>(exam?.status || ExamStatus.COMPLETED);
   const [color, setColor] = useState(exam?.color || COLORS[0]);
   const [topics, setTopics] = useState<Topic[]>(exam?.topics || []);
-  const [newTopic, setNewTopic] = useState('');
+  
+  // New Fields
+  const [totalMarks, setTotalMarks] = useState<number | ''>(exam?.totalMarks || '');
+  const [correctAnswers, setCorrectAnswers] = useState<number | ''>(exam?.correctAnswers || '');
+  const [wrongAnswers, setWrongAnswers] = useState<number | ''>(exam?.wrongAnswers || '');
+  const [error, setError] = useState<string | null>(null);
 
-  const handleAddTopic = () => {
-    if (!newTopic.trim()) return;
-    setTopics([...topics, { id: crypto.randomUUID(), name: newTopic.trim(), isCompleted: false }]);
-    setNewTopic('');
+  function formatToday() {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+  }
+
+  const obtainedMarks = useMemo(() => {
+    if (correctAnswers === '' || wrongAnswers === '') return 0;
+    const deduction = Number(wrongAnswers) / 4;
+    return Number(correctAnswers) - deduction;
+  }, [correctAnswers, wrongAnswers]);
+
+  const calculateGrade = (score: number, total: number) => {
+    if (!total) return 'F';
+    const percentage = (score / total) * 100;
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 80) return 'A';
+    if (percentage >= 70) return 'A-';
+    if (percentage >= 60) return 'B';
+    if (percentage >= 50) return 'C';
+    return 'F';
   };
 
-  const handleRemoveTopic = (id: string) => {
-    setTopics(topics.filter(t => t.id !== id));
+  const availableChapters = useMemo(() => {
+    if (!subject || !(subject in NCTB_CURRICULUM)) return [];
+    return NCTB_CURRICULUM[subject as keyof typeof NCTB_CURRICULUM];
+  }, [subject]);
+
+  const handleToggleChapter = (chapterName: string) => {
+    const exists = topics.find(t => t.name === chapterName);
+    if (exists) {
+      setTopics(topics.filter(t => t.name !== chapterName));
+    } else {
+      setTopics([...topics, { id: crypto.randomUUID(), name: chapterName, isCompleted: true, isChapter: true }]);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!subject) return setError("Please select a subject.");
+    if (!examType) return setError("Please select an exam type.");
+    if (topics.length === 0) return setError("Please select at least one chapter.");
+    if (totalMarks === '' || correctAnswers === '' || wrongAnswers === '') return setError("Please fill in all marking fields.");
+    
+    if (obtainedMarks > Number(totalMarks)) {
+      return setError("Obtained marks cannot exceed Total Marks.");
+    }
+    if (obtainedMarks < 0) {
+      return setError("Obtained marks cannot be negative.");
+    }
+
     onSave({
       id: exam?.id,
       subject,
+      examType,
       date: new Date(date).toISOString(),
       location,
       status,
-      targetGrade,
       color,
       topics,
+      totalMarks: Number(totalMarks),
+      correctAnswers: Number(correctAnswers),
+      wrongAnswers: Number(wrongAnswers),
+      obtainedMarks,
+      grade: calculateGrade(obtainedMarks, Number(totalMarks)),
     });
   };
 
@@ -54,62 +105,172 @@ export const ExamForm: React.FC<ExamFormProps> = ({ exam, onSave, onClose }) => 
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden"
       >
         <div className="flex justify-between items-center p-6 border-b border-slate-100">
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-            {exam ? 'Edit Exam' : 'Add New Exam'}
-          </h2>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+              {exam ? 'Edit Exam Record' : 'Add Exam Record'}
+            </h2>
+            <p className="text-sm text-slate-500 uppercase tracking-widest font-bold">GST TRACKER</p>
+          </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-medium"
+            >
+              <AlertCircle size={20} />
+              {error}
+            </motion.div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Subject Name</label>
-              <input
+              <label className="text-sm font-semibold text-slate-700">Subject</label>
+              <select
                 required
                 value={subject}
-                onChange={e => setSubject(e.target.value)}
-                placeholder="e.g. Advanced Mathematics"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
-              />
+                onChange={e => {
+                  setSubject(e.target.value);
+                  setTopics([]); // Reset chapters when subject changes
+                }}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none transition-all appearance-none bg-white"
+              >
+                <option value="">Select Subject</option>
+                {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Exam Date & Time</label>
+              <label className="text-sm font-semibold text-slate-700">Exam Type</label>
+              <select
+                required
+                value={examType}
+                onChange={e => setExamType(e.target.value as ExamType)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none transition-all appearance-none bg-white"
+              >
+                {EXAM_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700">Exam Date</label>
               <input
                 required
-                type="datetime-local"
+                type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Location</label>
-              <input
-                value={location}
-                onChange={e => setLocation(e.target.value)}
-                placeholder="e.g. Hall B, Room 302"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Target Grade</label>
-              <input
-                value={targetGrade}
-                onChange={e => setTargetGrade(e.target.value)}
-                placeholder="e.g. A+"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none transition-all"
               />
             </div>
           </div>
 
+          {/* Chapters Section */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <label className="text-sm font-semibold text-slate-700">Select Chapters (NCTB)</label>
+              <span className="text-xs text-slate-400">{topics.length} selected</span>
+            </div>
+            
+            {!subject ? (
+              <div className="p-8 border-2 border-dashed border-slate-100 rounded-2xl text-center text-slate-400 text-sm">
+                Select a subject first to load chapters
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1 custom-scrollbar">
+                {availableChapters.map(chapter => {
+                  const isSelected = topics.some(t => t.name === chapter);
+                  return (
+                    <button
+                      key={chapter}
+                      type="button"
+                      onClick={() => handleToggleChapter(chapter)}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-xl border text-left transition-all text-sm",
+                        isSelected 
+                          ? "bg-brand-50 border-brand-200 text-brand-700 font-medium" 
+                          : "bg-white border-slate-100 text-slate-600 hover:border-slate-300"
+                      )}
+                    >
+                      <CheckCircle2 size={18} className={cn(isSelected ? "text-brand-500" : "text-slate-200")} />
+                      {chapter}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Performance Section */}
+          <div className="bg-slate-50 p-6 rounded-3xl space-y-6">
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              Performance & Marking
+            </h3>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase">Total Marks</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={totalMarks}
+                  onChange={e => setTotalMarks(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none bg-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase">Correct Answers</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={correctAnswers}
+                  onChange={e => setCorrectAnswers(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none bg-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase">Wrong Answers</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={wrongAnswers}
+                  onChange={e => setWrongAnswers(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200">
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase">Calculated Score</p>
+                <p className="text-3xl font-black text-slate-900">
+                  {obtainedMarks.toFixed(2)}
+                  <span className="text-sm font-medium text-slate-400 ml-1">/ {totalMarks || '0'}</span>
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Grade</p>
+                <p className={cn(
+                  "text-2xl font-black",
+                  calculateGrade(obtainedMarks, Number(totalMarks)) === 'F' ? "text-rose-500" : "text-emerald-500"
+                )}>
+                  {calculateGrade(obtainedMarks, Number(totalMarks))}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Theme Color */}
           <div className="space-y-3">
             <label className="text-sm font-semibold text-slate-700">Theme Color</label>
             <div className="flex flex-wrap gap-3">
@@ -128,53 +289,6 @@ export const ExamForm: React.FC<ExamFormProps> = ({ exam, onSave, onClose }) => 
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <label className="text-sm font-semibold text-slate-700">Study Topics</label>
-              <span className="text-xs text-slate-400">{topics.length} topics added</span>
-            </div>
-            
-            <div className="flex gap-2">
-              <input
-                value={newTopic}
-                onChange={e => setNewTopic(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddTopic())}
-                placeholder="Add a topic to study..."
-                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition-all"
-              />
-              <button
-                type="button"
-                onClick={handleAddTopic}
-                className="p-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors"
-              >
-                <Plus size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-              <AnimatePresence mode="popLayout">
-                {topics.map(topic => (
-                  <motion.div
-                    key={topic.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 10 }}
-                    className="flex items-center justify-between p-3 bg-slate-50 rounded-xl group"
-                  >
-                    <span className="text-sm text-slate-700">{topic.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTopic(topic.id)}
-                      className="text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </div>
-
           <div className="pt-6 flex gap-3">
             <button
               type="button"
@@ -188,7 +302,7 @@ export const ExamForm: React.FC<ExamFormProps> = ({ exam, onSave, onClose }) => 
               className="flex-[2] px-6 py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 shadow-lg shadow-brand-200 transition-all flex items-center justify-center gap-2"
             >
               <Save size={20} />
-              {exam ? 'Update Exam' : 'Create Exam'}
+              {exam ? 'Update Record' : 'Submit Exam'}
             </button>
           </div>
         </form>
