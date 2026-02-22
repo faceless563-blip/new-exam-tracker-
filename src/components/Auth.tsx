@@ -8,7 +8,7 @@ interface AuthProps {
 }
 
 export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
-  const [step, setStep] = useState<'PHONE' | 'OTP' | 'ROLL' | 'LOGIN'>('PHONE');
+  const [step, setStep] = useState<'PHONE' | 'ROLL' | 'LOGIN'>('PHONE');
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
@@ -17,16 +17,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [userName, setUserName] = useState('');
   const [userPhone, setUserPhone] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
-  const [simulatedOtp, setSimulatedOtp] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleRequestOtp = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/auth/request-otp', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, name }),
@@ -34,33 +33,9 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      if (data.otp) {
-        setSimulatedOtp(data.otp);
-      }
-      setStep('OTP');
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
       setGeneratedRoll(data.rollNumber);
-      setUserName(name);
-      setUserPhone(phone);
+      setUserName(data.name);
+      setUserPhone(data.phone);
       setStep('ROLL');
     } catch (err: any) {
       setError(err.message);
@@ -91,24 +66,26 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   };
 
   const handleForgotRoll = async () => {
-    if (!phone) {
-      setError("Please enter your phone number first");
+    if (!phone || !name) {
+      setError("Please enter your name and phone number first");
       setStep('PHONE');
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/auth/request-otp', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone, name }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      if (data.otp) setSimulatedOtp(data.otp);
-      setStep('OTP');
+      setGeneratedRoll(data.rollNumber);
+      setUserName(data.name);
+      setUserPhone(data.phone);
+      setStep('ROLL');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -139,7 +116,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                onSubmit={handleRequestOtp}
+                onSubmit={handleRegister}
                 className="space-y-6"
               >
                 <div className="space-y-4">
@@ -175,12 +152,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   </div>
                 </div>
 
-                {simulatedOtp && (
-                  <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl text-amber-700 text-xs font-bold text-center">
-                    Verification Code: <span className="text-lg font-black ml-2">{simulatedOtp}</span>
-                  </div>
-                )}
-
                 {error && (
                   <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold">
                     <AlertCircle size={18} />
@@ -193,7 +164,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   type="submit"
                   className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
                 >
-                  {loading ? <Loader2 className="animate-spin" /> : <>Send Code <ArrowRight size={20} /></>}
+                  {loading ? <Loader2 className="animate-spin" /> : <>Get Roll Number <ArrowRight size={20} /></>}
                 </button>
 
                 <div className="text-center">
@@ -205,62 +176,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     Already have a Roll Number? Login
                   </button>
                 </div>
-              </motion.form>
-            )}
-
-            {step === 'OTP' && (
-              <motion.form 
-                key="otp"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                onSubmit={handleVerifyOtp}
-                className="space-y-6"
-              >
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 uppercase tracking-wider ml-1">Verification Code</label>
-                  <div className="relative">
-                    <CheckCircle2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input 
-                      type="text"
-                      required
-                      placeholder="6-digit code"
-                      value={otp}
-                      onChange={e => setOtp(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-brand-500 outline-none transition-all font-bold text-slate-700 tracking-[0.5em]"
-                    />
-                  </div>
-                  <p className="text-[10px] text-slate-400 font-medium ml-1">Check your console for the simulated code</p>
-                </div>
-
-                {simulatedOtp && (
-                  <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl text-amber-700 text-xs font-bold text-center">
-                    Simulated Code: <span className="text-lg font-black ml-2">{simulatedOtp}</span>
-                  </div>
-                )}
-
-                {error && (
-                  <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold">
-                    <AlertCircle size={18} />
-                    {error}
-                  </div>
-                )}
-
-                <button 
-                  disabled={loading}
-                  type="submit"
-                  className="w-full py-4 bg-brand-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-brand-700 transition-all shadow-lg shadow-brand-200"
-                >
-                  {loading ? <Loader2 className="animate-spin" /> : <>Verify & Register <ArrowRight size={20} /></>}
-                </button>
-
-                <button 
-                  type="button"
-                  onClick={() => setStep('PHONE')}
-                  className="w-full text-sm font-bold text-slate-400 hover:text-slate-600"
-                >
-                  Change Phone Number
-                </button>
               </motion.form>
             )}
 

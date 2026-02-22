@@ -75,75 +75,42 @@ async function startServer() {
   });
 
   // Auth Endpoints
-  app.post("/api/auth/request-otp", async (req, res, next) => {
+  app.post("/api/auth/register", async (req, res, next) => {
     try {
       const { phone, name } = req.body;
       if (!phone || !/^(\+8801|01)[3-9]\d{8}$/.test(phone)) {
         return res.status(400).json({ error: "Invalid Bangladeshi phone number" });
       }
-
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiry = Date.now() + 5 * 60 * 1000; // 5 mins
-
-      const user = db.prepare("SELECT * FROM users WHERE phone = ?").get(phone) as any;
-      
-      if (user) {
-        db.prepare("UPDATE users SET otp = ?, otp_expiry = ?, name = ? WHERE phone = ?").run(otp, expiry, name || user.name, phone);
-      } else {
-        db.prepare("INSERT INTO users (phone, otp, otp_expiry, name) VALUES (?, ?, ?, ?)").run(phone, otp, expiry, name || "User");
+      if (!name || name.trim().length < 2) {
+        return res.status(400).json({ error: "Please enter a valid name" });
       }
 
-      // Real SMS Sending
-      const client = getTwilio();
-      const from = process.env.TWILIO_PHONE_NUMBER;
+      let user = db.prepare("SELECT * FROM users WHERE phone = ?").get(phone) as any;
       
-      if (client && from) {
-        try {
-          // Ensure phone is in E.164 format for Twilio
-          const formattedPhone = phone.startsWith('+') ? phone : `+88${phone.startsWith('0') ? phone : '0' + phone}`;
-          
-          await client.messages.create({
-            body: `Your GST Fighter verification code is: ${otp}. Valid for 5 minutes.`,
-            from: from,
-            to: formattedPhone
-          });
-          console.log(`[SMS Sent] To ${formattedPhone}`);
-          return res.json({ message: "Verification code sent to your phone." });
-        } catch (err: any) {
-          console.error("Twilio Error:", err);
-          return res.status(500).json({ error: "Failed to send SMS. Please try again later." });
+      if (!user) {
+        let rollNumber = "";
+        let isUnique = false;
+        while (!isUnique) {
+          rollNumber = "GST-" + Math.floor(100000 + Math.random() * 899999).toString();
+          const existing = db.prepare("SELECT id FROM users WHERE roll_number = ?").get(rollNumber);
+          if (!existing) isUnique = true;
         }
+        db.prepare("INSERT INTO users (phone, name, roll_number) VALUES (?, ?, ?)").run(phone, name, rollNumber);
+        db.prepare("INSERT OR IGNORE INTO user_data (roll_number) VALUES (?)").run(rollNumber);
+        user = { phone, name, roll_number: rollNumber };
       } else {
-        // Fallback for development if keys are missing
-        console.log(`[SMS Simulation] To ${phone}: Your verification code is ${otp}`);
-        return res.json({ 
-          message: "OTP sent successfully (Simulated)", 
-          otp: process.env.NODE_ENV === 'production' ? undefined : otp 
-        });
+        // Update name if provided
+        db.prepare("UPDATE users SET name = ? WHERE phone = ?").run(name, phone);
       }
+
+      return res.json({ 
+        rollNumber: user.roll_number,
+        name: name,
+        phone: phone
+      });
     } catch (err) {
       next(err);
     }
-  });
-
-  app.post("/api/auth/verify-otp", (req, res) => {
-    const { phone, otp } = req.body;
-    const user = db.prepare("SELECT * FROM users WHERE phone = ?").get(phone) as any;
-
-    if (!user || user.otp !== otp || Date.now() > user.otp_expiry) {
-      return res.status(400).json({ error: "Invalid or expired OTP" });
-    }
-
-    let rollNumber = user.roll_number;
-    if (!rollNumber) {
-      rollNumber = "GST-" + Math.floor(100000 + Math.random() * 899999).toString();
-      db.prepare("UPDATE users SET roll_number = ?, otp = NULL, otp_expiry = NULL WHERE phone = ?").run(rollNumber, phone);
-      db.prepare("INSERT OR IGNORE INTO user_data (roll_number) VALUES (?)").run(rollNumber);
-    } else {
-      db.prepare("UPDATE users SET otp = NULL, otp_expiry = NULL WHERE phone = ?").run(phone);
-    }
-
-    res.json({ rollNumber });
   });
 
   app.post("/api/auth/login", (req, res) => {
