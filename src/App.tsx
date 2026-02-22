@@ -21,14 +21,8 @@ import {
   Moon,
   Sun,
   Zap,
-  Sparkles,
-  LogOut,
-  User,
-  Target,
-  Hash,
-  Trophy
+  Sparkles
 } from 'lucide-react';
-import { Auth } from './components/Auth';
 import { Exam, ExamStatus, ExamType, ChapterProgress } from './types';
 import { ExamCard } from './components/ExamCard';
 import { ExamForm } from './components/ExamForm';
@@ -48,77 +42,10 @@ import { NCTB_CURRICULUM, SUBJECTS, EXAM_TYPES } from './constants';
 type Theme = 'light' | 'dark' | 'midnight' | 'forest' | 'cyberpunk';
 
 export default function App() {
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [chapterProgress, setChapterProgress] = useState<ChapterProgress[]>([]);
-  const [rollNumber, setRollNumber] = useState<string | null>(localStorage.getItem('rollNumber'));
-  const [userName, setUserName] = useState<string | null>(localStorage.getItem('userName'));
-  const [userPhone, setUserPhone] = useState<string | null>(localStorage.getItem('userPhone'));
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  // Initial Data Fetch
-  useEffect(() => {
-    if (rollNumber) {
-      const fetchData = async () => {
-        try {
-          const res = await fetch(`/api/user/data/${rollNumber}`);
-          if (res.ok) {
-            const data = await res.json();
-            setExams(data.exams || []);
-            setChapterProgress(data.progress || []);
-          }
-        } catch (err) {
-          console.error("Failed to fetch user data:", err);
-        }
-      };
-      fetchData();
-    }
-  }, [rollNumber]);
-
-  // Auto-sync to server
-  useEffect(() => {
-    if (rollNumber && (exams.length > 0 || chapterProgress.length > 0)) {
-      const syncData = async () => {
-        setIsSyncing(true);
-        try {
-          await fetch(`/api/user/data/${rollNumber}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ exams, progress: chapterProgress }),
-          });
-        } catch (err) {
-          console.error("Failed to sync data:", err);
-        } finally {
-          setIsSyncing(false);
-        }
-      };
-
-      const timer = setTimeout(syncData, 2000); // Debounce sync
-      return () => clearTimeout(timer);
-    }
-  }, [exams, chapterProgress, rollNumber]);
-
-  const handleLogin = (roll: string, name: string, phone: string, remember: boolean) => {
-    setRollNumber(roll);
-    setUserName(name);
-    setUserPhone(phone);
-    if (remember) {
-      localStorage.setItem('rollNumber', roll);
-      localStorage.setItem('userName', name);
-      localStorage.setItem('userPhone', phone);
-    }
-  };
-
-  const handleLogout = () => {
-    setRollNumber(null);
-    setUserName(null);
-    setUserPhone(null);
-    localStorage.removeItem('rollNumber');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userPhone');
-    setExams([]);
-    setChapterProgress([]);
-  };
-
+  const [exams, setExams] = useState<Exam[]>(() => {
+    const saved = localStorage.getItem('exams');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [theme, setTheme] = useState<Theme>(() => {
     return (localStorage.getItem('theme') as Theme) || 'light';
   });
@@ -129,7 +56,11 @@ export default function App() {
   const [filterStatus, setFilterStatus] = useState<ExamStatus | 'ALL'>('ALL');
   const [filterType, setFilterType] = useState<ExamType | 'ALL'>('ALL');
   const [undoState, setUndoState] = useState<{ exams: Exam[], message: string } | null>(null);
-  const [activeSection, setActiveSection] = useState<'exams' | 'curriculum' | 'profile'>('exams');
+  const [activeSection, setActiveSection] = useState<'exams' | 'curriculum'>('exams');
+  const [chapterProgress, setChapterProgress] = useState<ChapterProgress[]>(() => {
+    const saved = localStorage.getItem('chapterProgress');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   useEffect(() => {
     if (undoState) {
@@ -150,7 +81,13 @@ export default function App() {
     setExams(newExams);
   };
 
-  // Removed local storage effects as we use server sync now
+  useEffect(() => {
+    localStorage.setItem('exams', JSON.stringify(exams));
+  }, [exams]);
+
+  useEffect(() => {
+    localStorage.setItem('chapterProgress', JSON.stringify(chapterProgress));
+  }, [chapterProgress]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -465,10 +402,6 @@ export default function App() {
     { id: 'cyberpunk', icon: Sparkles, label: 'Cyber' },
   ];
 
-  if (!rollNumber) {
-    return <Auth onLogin={handleLogin} />;
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 pb-20 transition-colors duration-300">
       {/* Header */}
@@ -476,19 +409,11 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-200">
-              <Target className="text-white" size={24} />
+              <GraduationCap className="text-white" size={24} />
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900 tracking-tight">GST FIGHT</h1>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">by soumya</p>
-            </div>
-          </div>
-
-          <div className="flex-1 max-w-md mx-8 hidden lg:flex items-center justify-center">
-            <div className="flex items-center gap-2 px-6 py-2 bg-slate-50 rounded-2xl border border-slate-100 shadow-inner">
-              <Hash size={14} className="text-brand-600" />
-              <span className="text-sm font-black text-slate-700 tracking-wider">ROLL: {rollNumber}</span>
-              {isSyncing && <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse ml-2" />}
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">by chatterjee</p>
             </div>
           </div>
 
@@ -504,24 +429,24 @@ export default function App() {
               />
             </div>
             
-            <button 
-              onClick={() => setActiveSection('profile')}
-              className={cn(
-                "p-2.5 rounded-xl transition-all",
-                activeSection === 'profile' ? "bg-brand-50 text-brand-600" : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-              )}
-              title="Profile"
-            >
-              <User size={20} />
-            </button>
-
-            <button 
-              onClick={handleLogout}
-              className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-              title="Logout"
-            >
-              <LogOut size={20} />
-            </button>
+            {/* Theme Selector */}
+            <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
+              {themes.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTheme(t.id)}
+                  title={t.label}
+                  className={cn(
+                    "p-2 rounded-lg transition-all active:scale-90",
+                    theme === t.id 
+                      ? "bg-white text-brand-600 shadow-sm border border-slate-200" 
+                      : "text-slate-400 hover:text-slate-600 hover:bg-white/50"
+                  )}
+                >
+                  <t.icon size={18} />
+                </button>
+              ))}
+            </div>
 
             <button 
               onClick={() => setIsFormOpen(true)}
@@ -561,18 +486,6 @@ export default function App() {
             <BookOpen size={18} />
             Curriculum Tracker
           </button>
-          <button
-            onClick={() => setActiveSection('profile')}
-            className={cn(
-              "px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 active:scale-95",
-              activeSection === 'profile' 
-                ? "bg-brand-600 text-white shadow-lg shadow-brand-100" 
-                : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-            )}
-          >
-            <User size={18} />
-            Profile
-          </button>
         </div>
 
         <AnimatePresence mode="wait">
@@ -584,320 +497,246 @@ export default function App() {
               exit={{ opacity: 0, x: 20 }}
               className="grid grid-cols-1 lg:grid-cols-12 gap-8"
             >
-              {/* Left Column: Stats & AI */}
-              <div className="lg:col-span-4 space-y-8">
-                <GSTCountdown progress={chapterProgress} exams={exams} />
+          {/* Left Column: Stats & AI */}
+          <div className="lg:col-span-4 space-y-8">
+            <GSTCountdown progress={chapterProgress} exams={exams} />
 
-                <RevisionReminders 
-                  progress={chapterProgress} 
-                  exams={exams} 
-                  onChapterClick={(subject, chapter) => {
-                    setActiveSection('curriculum');
-                  }}
-                />
+            <RevisionReminders 
+              progress={chapterProgress} 
+              exams={exams} 
+              onChapterClick={(subject, chapter) => {
+                setActiveSection('curriculum');
+                // We could also set a search filter here if needed
+              }}
+            />
 
-                <ReportCard 
-                  overallGrade={stats.overallGrade}
-                  overallAccuracy={stats.avgAccuracy}
-                  subjectGrades={analysis.subjectGrades}
-                />
+            <ReportCard 
+              overallGrade={stats.overallGrade}
+              overallAccuracy={stats.avgAccuracy}
+              subjectGrades={analysis.subjectGrades}
+            />
 
-                {/* Weakness Analysis Card */}
-                {exams.some(e => e.obtainedMarks !== undefined) && (
-                  <div className="bg-white p-6 rounded-3xl border border-rose-100 shadow-sm bg-rose-50/10 overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                      <AlertCircle size={80} className="text-rose-500" />
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mb-6 relative">
-                      <div className="p-2 bg-rose-100 rounded-lg">
-                        <AlertCircle className="text-rose-600" size={20} />
+            {/* Weakness Analysis Card */}
+            {exams.some(e => e.obtainedMarks !== undefined) && (
+              <div className="bg-white p-6 rounded-3xl border border-rose-100 shadow-sm bg-rose-50/10 overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <AlertCircle size={80} className="text-rose-500" />
+                </div>
+                
+                <div className="flex items-center gap-2 mb-6 relative">
+                  <div className="p-2 bg-rose-100 rounded-lg">
+                    <AlertCircle className="text-rose-600" size={20} />
+                  </div>
+                  <h3 className="font-bold text-slate-900">Weakness Analysis</h3>
+                </div>
+                
+                <div className="space-y-6 relative">
+                  {analysis.weakSubjects.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Weakest Subject</p>
+                      <div className="flex items-center justify-between p-4 bg-rose-50 border border-rose-100 rounded-2xl shadow-sm shadow-rose-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 font-bold text-xs">
+                            {analysis.weakSubjects[0].name[0]}
+                          </div>
+                          <span className="text-sm font-bold text-rose-700">{analysis.weakSubjects[0].name}</span>
+                        </div>
+                        <span className="text-xs font-bold text-rose-500 bg-white px-2 py-1 rounded-lg border border-rose-100">
+                          {Math.round(analysis.weakSubjects[0].accuracy)}%
+                        </span>
                       </div>
-                      <h3 className="font-bold text-slate-900">Weakness Analysis</h3>
                     </div>
-                    
-                    <div className="space-y-6 relative">
-                      {analysis.weakSubjects.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Weakest Subject</p>
-                          <div className="flex items-center justify-between p-4 bg-rose-50 border border-rose-100 rounded-2xl shadow-sm shadow-rose-100">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 font-bold text-xs">
-                                {analysis.weakSubjects[0].name[0]}
-                              </div>
-                              <span className="text-sm font-bold text-rose-700">{analysis.weakSubjects[0].name}</span>
-                            </div>
-                            <span className="text-xs font-bold text-rose-500 bg-white px-2 py-1 rounded-lg border border-rose-100">
-                              {Math.round(analysis.weakSubjects[0].accuracy)}%
+                  )}
+
+                  {analysis.weakChapters.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Weakest Chapters</p>
+                      <div className="space-y-2">
+                        {analysis.weakChapters.map(chapter => (
+                          <div key={chapter.name} className="flex items-center justify-between p-3 bg-white border border-rose-100 rounded-xl hover:border-rose-300 transition-colors group">
+                            <span className="text-xs font-medium text-slate-700 truncate max-w-[160px] group-hover:text-rose-600 transition-colors">{chapter.name}</span>
+                            <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md">
+                              {Math.round(chapter.accuracy)}%
                             </span>
                           </div>
-                        </div>
-                      )}
-
-                      {analysis.weakChapters.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Weakest Chapters</p>
-                          <div className="space-y-2">
-                            {analysis.weakChapters.map(chapter => (
-                              <div key={chapter.name} className="flex items-center justify-between p-3 bg-white border border-rose-100 rounded-xl hover:border-rose-300 transition-colors group">
-                                <span className="text-xs font-medium text-slate-700 truncate max-w-[160px] group-hover:text-rose-600 transition-colors">{chapter.name}</span>
-                                <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md">
-                                  {Math.round(chapter.accuracy)}%
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <AIStudyBuddy exams={exams} />
-                
-                <ChapterReportCard performance={analysis.formattedExamTypePerformance} />
-              </div>
-
-              {/* Right Column: Exam List */}
-              <div className="lg:col-span-8 space-y-8">
-                <ProgressTracker 
-                  overallPercentage={stats.overallPercentage}
-                  subjectProgress={stats.subjectProgress}
-                  typeProgress={stats.typeProgress}
-                />
-
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex flex-wrap items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 w-fit">
-                      <button 
-                        onClick={() => setFilterStatus('ALL')}
-                        className={cn(
-                          "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
-                          filterStatus === 'ALL' ? "bg-slate-900 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
-                        )}
-                      >
-                        All Status
-                      </button>
-                      <button 
-                        onClick={() => setFilterStatus(ExamStatus.UPCOMING)}
-                        className={cn(
-                          "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
-                          filterStatus === ExamStatus.UPCOMING ? "bg-slate-900 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
-                        )}
-                      >
-                        Upcoming
-                      </button>
-                      <button 
-                        onClick={() => setFilterStatus(ExamStatus.COMPLETED)}
-                        className={cn(
-                          "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
-                          filterStatus === ExamStatus.COMPLETED ? "bg-slate-900 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
-                        )}
-                      >
-                        Completed
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => setViewMode('grid')}
-                        className={cn(
-                          "p-2 rounded-lg transition-all",
-                          viewMode === 'grid' ? "bg-white text-brand-600 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-600"
-                        )}
-                      >
-                        <LayoutGrid size={20} />
-                      </button>
-                      <button 
-                        onClick={() => setViewMode('list')}
-                        className={cn(
-                          "p-2 rounded-lg transition-all",
-                          viewMode === 'list' ? "bg-white text-brand-600 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-600"
-                        )}
-                      >
-                        <ListIcon size={20} />
-                      </button>
-                      <button 
-                        onClick={() => setViewMode('presets')}
-                        className={cn(
-                          "p-2 rounded-lg transition-all",
-                          viewMode === 'presets' ? "bg-white text-brand-600 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-600"
-                        )}
-                      >
-                        <Zap size={20} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 w-fit">
-                    <button 
-                      onClick={() => setFilterType('ALL')}
-                      className={cn(
-                        "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
-                        filterType === 'ALL' ? "bg-brand-600 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
-                      )}
-                    >
-                      All Types
-                    </button>
-                    {Object.values(ExamType).map((type) => (
-                      <button 
-                        key={type}
-                        onClick={() => setFilterType(type)}
-                        className={cn(
-                          "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
-                          filterType === type ? "bg-brand-600 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
-                        )}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <AnimatePresence mode="popLayout">
-                  {viewMode === 'presets' ? (
-                    <motion.div
-                      key="presets"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                    >
-                      <ChapterPresets onSelect={handlePresetSelect} />
-                    </motion.div>
-                  ) : filteredExams.length > 0 ? (
-                    <div className={cn(
-                      "grid gap-6",
-                      viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
-                    )}>
-                      {filteredExams.map(exam => (
-                        <ExamCard
-                          key={exam.id}
-                          exam={exam}
-                          onEdit={(e) => {
-                            setEditingExam(e);
-                            setIsFormOpen(true);
-                          }}
-                          onDelete={handleDeleteExam}
-                          onToggleTopic={handleToggleTopic}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="bg-white rounded-3xl border border-slate-200 p-12 text-center"
-                    >
-                      <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <AlertCircle className="text-slate-300" size={40} />
+                        ))}
                       </div>
-                      <h3 className="text-xl font-bold text-slate-900 mb-2">No exams found</h3>
-                      <p className="text-slate-500 mb-8 max-w-xs mx-auto">
-                        {searchQuery || filterStatus !== 'ALL' 
-                          ? "Try adjusting your search or filters to find what you're looking for." 
-                          : "Start by adding your first exam to track your progress and get AI study tips."}
-                      </p>
-                      <button 
-                        onClick={() => setIsFormOpen(true)}
-                        className="inline-flex items-center gap-2 bg-brand-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-100"
-                      >
-                        <Plus size={20} />
-                        Add Your First Exam
-                      </button>
-                    </motion.div>
+                    </div>
                   )}
-                </AnimatePresence>
-              </div>
-            </motion.div>
-          ) : activeSection === 'curriculum' ? (
-            <motion.div
-              key="curriculum"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <CurriculumTracker 
-                exams={exams}
-                progress={chapterProgress}
-                onToggleTask={handleToggleTask}
-              />
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="profile"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="max-w-2xl mx-auto"
-            >
-              <div className="bg-white rounded-[2.5rem] p-12 shadow-xl shadow-slate-200 border border-slate-100">
-                <div className="text-center mb-10">
-                  <div className="w-24 h-24 bg-brand-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border-4 border-white shadow-lg">
-                    <User className="text-brand-600" size={48} />
-                  </div>
-                  <h2 className="text-3xl font-black text-slate-900 tracking-tight">{userName}</h2>
-                  <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mt-2">GST Admission Candidate</p>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Roll Number</p>
-                      <p className="text-xl font-black text-slate-900">{rollNumber}</p>
-                    </div>
-                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Phone Number</p>
-                      <p className="text-xl font-black text-slate-900">{userPhone}</p>
-                    </div>
-                  </div>
-
-                  <div className="p-8 bg-brand-600 rounded-3xl text-white shadow-lg shadow-brand-100">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-3">
-                        <Trophy size={24} />
-                        <h3 className="text-lg font-black">Performance Summary</h3>
-                      </div>
-                      <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-widest">Admission 2026</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="text-center">
-                        <p className="text-3xl font-black">{exams.length}</p>
-                        <p className="text-[10px] font-bold opacity-60 uppercase tracking-tighter">Exams Taken</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-3xl font-black">
-                          {exams.length > 0 ? (exams.reduce((acc, e) => acc + (e.obtainedMarks || 0), 0) / exams.length).toFixed(1) : '0.0'}
-                        </p>
-                        <p className="text-[10px] font-bold opacity-60 uppercase tracking-tighter">Avg Score</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-3xl font-black">
-                          {Math.round((chapterProgress.filter(p => p.isClassDone && p.isUniQBDone && p.isGSTQBDone).length / Object.values(NCTB_CURRICULUM).flat().length) * 100)}%
-                        </p>
-                        <p className="text-[10px] font-bold opacity-60 uppercase tracking-tighter">Syllabus Done</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <button 
-                      onClick={() => setActiveSection('exams')}
-                      className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
-                    >
-                      Back to Exams
-                    </button>
-                    <button 
-                      onClick={handleLogout}
-                      className="px-8 py-4 bg-rose-50 text-rose-600 rounded-2xl font-black hover:bg-rose-100 transition-all border border-rose-100"
-                    >
-                      Logout
-                    </button>
-                  </div>
                 </div>
               </div>
-            </motion.div>
-          )}
+            )}
+
+            <AIStudyBuddy exams={exams} />
+            
+            <ChapterReportCard performance={analysis.formattedExamTypePerformance} />
+          </div>
+
+          {/* Right Column: Exam List */}
+          <div className="lg:col-span-8 space-y-8">
+            <ProgressTracker 
+              overallPercentage={stats.overallPercentage}
+              subjectProgress={stats.subjectProgress}
+              typeProgress={stats.typeProgress}
+            />
+
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 w-fit">
+                  <button 
+                    onClick={() => setFilterStatus('ALL')}
+                    className={cn(
+                      "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
+                      filterStatus === 'ALL' ? "bg-slate-900 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
+                    )}
+                  >
+                    All Status
+                  </button>
+                  <button 
+                    onClick={() => setFilterStatus(ExamStatus.UPCOMING)}
+                    className={cn(
+                      "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
+                      filterStatus === ExamStatus.UPCOMING ? "bg-slate-900 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
+                    )}
+                  >
+                    Upcoming
+                  </button>
+                  <button 
+                    onClick={() => setFilterStatus(ExamStatus.COMPLETED)}
+                    className={cn(
+                      "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
+                      filterStatus === ExamStatus.COMPLETED ? "bg-slate-900 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
+                    )}
+                  >
+                    Completed
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setViewMode('grid')}
+                    className={cn(
+                      "p-2 rounded-lg transition-all",
+                      viewMode === 'grid' ? "bg-white text-brand-600 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-600"
+                    )}
+                  >
+                    <LayoutGrid size={20} />
+                  </button>
+                  <button 
+                    onClick={() => setViewMode('list')}
+                    className={cn(
+                      "p-2 rounded-lg transition-all",
+                      viewMode === 'list' ? "bg-white text-brand-600 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-600"
+                    )}
+                  >
+                    <ListIcon size={20} />
+                  </button>
+                  <button 
+                    onClick={() => setViewMode('presets')}
+                    className={cn(
+                      "p-2 rounded-lg transition-all",
+                      viewMode === 'presets' ? "bg-white text-brand-600 shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-600"
+                    )}
+                  >
+                    <Zap size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 w-fit">
+                <button 
+                  onClick={() => setFilterType('ALL')}
+                  className={cn(
+                    "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
+                    filterType === 'ALL' ? "bg-brand-600 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
+                  )}
+                >
+                  All Types
+                </button>
+                {Object.values(ExamType).map((type) => (
+                  <button 
+                    key={type}
+                    onClick={() => setFilterType(type)}
+                    className={cn(
+                      "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
+                      filterType === type ? "bg-brand-600 text-white shadow-md" : "text-slate-500 hover:text-slate-900"
+                    )}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <AnimatePresence mode="popLayout">
+              {viewMode === 'presets' ? (
+                <motion.div
+                  key="presets"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <ChapterPresets onSelect={handlePresetSelect} />
+                </motion.div>
+              ) : filteredExams.length > 0 ? (
+                <div className={cn(
+                  "grid gap-6",
+                  viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+                )}>
+                  {filteredExams.map(exam => (
+                    <ExamCard
+                      key={exam.id}
+                      exam={exam}
+                      onEdit={(e) => {
+                        setEditingExam(e);
+                        setIsFormOpen(true);
+                      }}
+                      onDelete={handleDeleteExam}
+                      onToggleTopic={handleToggleTopic}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="bg-white rounded-3xl border border-slate-200 p-12 text-center"
+                >
+                  <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <AlertCircle className="text-slate-300" size={40} />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">No exams found</h3>
+                  <p className="text-slate-500 mb-8 max-w-xs mx-auto">
+                    {searchQuery || filterStatus !== 'ALL' 
+                      ? "Try adjusting your search or filters to find what you're looking for." 
+                      : "Start by adding your first exam to track your progress and get AI study tips."}
+                  </p>
+                  <button 
+                    onClick={() => setIsFormOpen(true)}
+                    className="inline-flex items-center gap-2 bg-brand-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-100"
+                  >
+                    <Plus size={20} />
+                    Add Your First Exam
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+        ) : (
+          <motion.div
+            key="curriculum"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+          >
+            <CurriculumTracker 
+              exams={exams}
+              progress={chapterProgress}
+              onToggleTask={handleToggleTask}
+            />
+          </motion.div>
+        )}
         </AnimatePresence>
       </main>
       
