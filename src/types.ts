@@ -7,7 +7,10 @@ export enum ExamStatus {
 export enum ExamType {
   V_QB = 'V.QB',
   GST_QB = 'GST QB',
-  PH_EXAM = 'PH EXAM'
+  PH_EXAM = 'PH EXAM',
+  PAPER_FINAL = 'Paper Final',
+  SUBJECT_FINAL = 'Subject Final',
+  FULL_MOCK = 'Full Mock'
 }
 
 export interface Topic {
@@ -15,6 +18,13 @@ export interface Topic {
   name: string;
   isCompleted: boolean;
   isChapter?: boolean;
+}
+
+export interface ExamSection {
+  name: string;
+  correct: number;
+  wrong: number;
+  total: number;
 }
 
 export interface Exam {
@@ -33,7 +43,9 @@ export interface Exam {
   totalMarks?: number;
   correctAnswers?: number;
   wrongAnswers?: number;
+  negativeMarks?: number;
   obtainedMarks?: number;
+  sections?: ExamSection[]; // For Full Mock tests
 }
 
 export interface StudySession {

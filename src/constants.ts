@@ -65,4 +65,23 @@ export const NCTB_CURRICULUM = {
 
 export const SUBJECTS = ['Physics', 'Chemistry', 'Mathematics'] as const;
 
-export const EXAM_TYPES = ['V.QB', 'GST QB', 'PH EXAM'] as const;
+export const PAPER_FINALS = [
+  'Physics 1st Paper',
+  'Physics 2nd Paper',
+  'Chemistry 1st Paper',
+  'Chemistry 2nd Paper',
+  'Math 1st Paper',
+  'Math 2nd Paper'
+] as const;
+
+export const SUBJECT_FINALS = [
+  'Physics Final',
+  'Chemistry Final',
+  'Math Final'
+] as const;
+
+export const MOCK_TESTS = [
+  'GST Full Mock Test'
+] as const;
+
+export const EXAM_TYPES = ['V.QB', 'GST QB', 'PH EXAM', 'Paper Final', 'Subject Final', 'Full Mock'] as const;

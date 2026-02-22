@@ -29,10 +29,11 @@ export const ExamCard: React.FC<ExamCardProps> = ({ exam, onEdit, onDelete, onTo
     <motion.div
       layout
       initial={{ opacity: 0, y: 20 }}
+      whileHover={{ y: -4, scale: 1.01 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className={cn(
-        "group relative bg-white rounded-3xl border p-6 hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300",
+        "group relative bg-white rounded-3xl border p-6 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-300 cursor-default",
         isFail ? "border-rose-200 bg-rose-50/30" : "border-slate-200"
       )}
     >
@@ -89,18 +90,22 @@ export const ExamCard: React.FC<ExamCardProps> = ({ exam, onEdit, onDelete, onTo
 
       {/* Performance Grid */}
       {exam.totalMarks !== undefined && (
-        <div className="grid grid-cols-3 gap-2 mb-6">
-          <div className="bg-slate-50 p-3 rounded-2xl text-center">
-            <p className="text-[10px] font-bold text-slate-400 uppercase">Total</p>
+        <div className="grid grid-cols-4 gap-2 mb-6">
+          <div className="bg-slate-50 p-3 rounded-2xl text-center hover:bg-slate-100 transition-colors cursor-help group/stat">
+            <p className="text-[10px] font-bold text-slate-400 uppercase group-hover/stat:text-slate-500">Total</p>
             <p className="text-lg font-bold text-slate-700">{exam.totalMarks}</p>
           </div>
-          <div className="bg-emerald-50 p-3 rounded-2xl text-center">
-            <p className="text-[10px] font-bold text-emerald-400 uppercase">Correct</p>
+          <div className="bg-emerald-50 p-3 rounded-2xl text-center hover:bg-emerald-100 transition-colors cursor-help group/stat">
+            <p className="text-[10px] font-bold text-emerald-400 uppercase group-hover/stat:text-emerald-500">Correct</p>
             <p className="text-lg font-bold text-emerald-600">{exam.correctAnswers}</p>
           </div>
-          <div className="bg-rose-50 p-3 rounded-2xl text-center">
-            <p className="text-[10px] font-bold text-rose-400 uppercase">Wrong</p>
+          <div className="bg-rose-50 p-3 rounded-2xl text-center hover:bg-rose-100 transition-colors cursor-help group/stat">
+            <p className="text-[10px] font-bold text-rose-400 uppercase group-hover/stat:text-rose-500">Wrong</p>
             <p className="text-lg font-bold text-rose-600">{exam.wrongAnswers}</p>
+          </div>
+          <div className="bg-amber-50 p-3 rounded-2xl text-center hover:bg-amber-100 transition-colors cursor-help group/stat">
+            <p className="text-[10px] font-bold text-amber-500 uppercase group-hover/stat:text-amber-600">Deduction</p>
+            <p className="text-lg font-bold text-amber-600">{exam.negativeMarks?.toFixed(2) || '0.00'}</p>
           </div>
         </div>
       )}
@@ -108,19 +113,29 @@ export const ExamCard: React.FC<ExamCardProps> = ({ exam, onEdit, onDelete, onTo
       {/* Obtained Marks Banner */}
       {exam.obtainedMarks !== undefined && (
         <div className={cn(
-          "p-4 rounded-2xl mb-6 flex items-center justify-between shadow-lg",
+          "p-4 rounded-2xl mb-6 flex items-center justify-between shadow-lg relative overflow-hidden",
           isFail ? "bg-rose-600 shadow-rose-200" : "bg-brand-600 shadow-brand-200"
         )}>
-          <div className="flex items-center gap-3 text-white">
+          {/* Background decoration */}
+          <div className="absolute -right-4 -bottom-4 opacity-10">
+            <Award size={100} className="text-white" />
+          </div>
+
+          <div className="flex items-center gap-3 text-white relative z-10">
             <div className="p-2 bg-white/10 rounded-lg">
               <Award size={20} className="text-white" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-white/60 uppercase">Obtained Marks</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-[10px] font-bold text-white/60 uppercase">Obtained Marks</p>
+                <span className="text-[8px] font-black bg-black/20 px-1 py-0.5 rounded text-white/40 uppercase tracking-tighter">
+                  {exam.correctAnswers} - {exam.negativeMarks?.toFixed(2)}
+                </span>
+              </div>
               <p className="text-xl font-black">{exam.obtainedMarks.toFixed(2)}</p>
             </div>
           </div>
-          <div className="text-right text-white">
+          <div className="text-right text-white relative z-10">
             <p className="text-[10px] font-bold text-white/60 uppercase">Grade</p>
             <p className="text-xl font-black">
               {exam.grade}
@@ -142,10 +157,10 @@ export const ExamCard: React.FC<ExamCardProps> = ({ exam, onEdit, onDelete, onTo
               key={topic.id}
               onClick={() => onToggleTopic(exam.id, topic.id)}
               className={cn(
-                "w-full flex items-center gap-2 text-xs p-2 rounded-lg transition-all",
+                "w-full flex items-center gap-2 text-xs p-2 rounded-lg transition-all active:scale-[0.98]",
                 topic.isCompleted 
-                  ? "text-slate-600 bg-slate-50" 
-                  : "text-slate-400 bg-slate-50/50 opacity-60"
+                  ? "text-slate-600 bg-slate-50 hover:bg-slate-100 hover:text-slate-900" 
+                  : "text-slate-400 bg-slate-50/50 opacity-60 hover:opacity-100 hover:bg-slate-100"
               )}
             >
               {topic.isCompleted ? (
