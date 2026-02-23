@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Phone, Hash, ArrowRight, CheckCircle2, AlertCircle, Loader2, LogIn, User } from 'lucide-react';
+import { Phone, Hash, ArrowRight, CheckCircle2, AlertCircle, Loader2, LogIn, User, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface AuthProps {
@@ -8,7 +8,7 @@ interface AuthProps {
 }
 
 export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
-  const [step, setStep] = useState<'PHONE' | 'ROLL' | 'LOGIN'>('PHONE');
+  const [step, setStep] = useState<'WELCOME' | 'PHONE' | 'ROLL' | 'LOGIN'>('WELCOME');
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
@@ -103,6 +103,41 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           </div>
 
           <AnimatePresence mode="wait">
+            {step === 'WELCOME' && (
+              <motion.div
+                key="welcome"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-8 text-center"
+              >
+                <div className="space-y-4">
+                  <div className="w-20 h-20 bg-brand-100 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+                    <Sparkles className="text-brand-600" size={40} />
+                  </div>
+                  <h2 className="text-2xl font-black text-slate-900 leading-tight">Welcome to GST Fighter!</h2>
+                  <p className="text-slate-500 font-medium leading-relaxed">
+                    Your ultimate companion for GST admission preparation. Track your exams, manage your curriculum, and get AI-powered study insights.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <button 
+                    onClick={() => setStep('PHONE')}
+                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                  >
+                    Get Started <ArrowRight size={20} />
+                  </button>
+                  <button 
+                    onClick={() => setStep('LOGIN')}
+                    className="w-full py-4 bg-white text-slate-600 border border-slate-200 rounded-2xl font-bold hover:bg-slate-50 transition-all"
+                  >
+                    I already have a Roll Number
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
             {step === 'PHONE' && (
               <motion.form 
                 key="phone"
@@ -160,13 +195,20 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   {loading ? <Loader2 className="animate-spin" /> : <>Get Roll Number <ArrowRight size={20} /></>}
                 </button>
 
-                <div className="text-center">
+                <div className="text-center space-y-4">
                   <button 
                     type="button"
                     onClick={() => setStep('LOGIN')}
-                    className="text-sm font-bold text-brand-600 hover:text-brand-700"
+                    className="text-sm font-bold text-brand-600 hover:text-brand-700 block w-full"
                   >
                     Already have a Roll Number? Login
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setStep('WELCOME')}
+                    className="text-xs font-bold text-slate-400 hover:text-slate-600"
+                  >
+                    ← Back to Welcome
                   </button>
                 </div>
               </motion.form>
@@ -261,13 +303,22 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   >
                     Don't have an account? Register
                   </button>
-                  <button 
-                    type="button"
-                    onClick={handleForgotRoll}
-                    className="text-xs font-bold text-slate-400 hover:text-slate-600"
-                  >
-                    Forgot Roll Number? Generate New
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      type="button"
+                      onClick={handleForgotRoll}
+                      className="text-xs font-bold text-slate-400 hover:text-slate-600"
+                    >
+                      Forgot Roll Number? Generate New
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setStep('WELCOME')}
+                      className="text-xs font-bold text-slate-400 hover:text-slate-600"
+                    >
+                      ← Back to Welcome
+                    </button>
+                  </div>
                 </div>
               </motion.form>
             )}

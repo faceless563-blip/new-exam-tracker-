@@ -8,9 +8,10 @@ import { cn } from '../lib/utils';
 
 interface AIStudyBuddyProps {
   exams: Exam[];
+  userName: string;
 }
 
-export const AIStudyBuddy: React.FC<AIStudyBuddyProps> = ({ exams }) => {
+export const AIStudyBuddy: React.FC<AIStudyBuddyProps> = ({ exams, userName }) => {
   const [loading, setLoading] = useState(false);
   const [advice, setAdvice] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'tips' | 'plan'>('tips');
@@ -35,8 +36,8 @@ export const AIStudyBuddy: React.FC<AIStudyBuddyProps> = ({ exams }) => {
       }));
 
       const prompt = type === 'tips' 
-        ? `Based on these GST exam records: ${JSON.stringify(examData)}, identify my weakest subjects and chapters (those with low grades or accuracy). Provide 5 highly specific, actionable study tips to improve in those areas. Focus on the negative marking system (1 mark deduction for every 4 wrong answers).`
-        : `Create a detailed weekly study plan for these GST exams: ${JSON.stringify(examData)}. Prioritize the weakest chapters and subjects. Break it down by day and suggest specific practice strategies for V.QB, GST QB, and PH EXAM types.`;
+        ? `My name is ${userName}. Based on these GST exam records: ${JSON.stringify(examData)}, identify my weakest subjects and chapters (those with low grades or accuracy). Provide 5 highly specific, actionable study tips to improve in those areas. Focus on the negative marking system (1 mark deduction for every 4 wrong answers). Refer to me by my name in the response.`
+        : `My name is ${userName}. Create a detailed weekly study plan for these GST exams: ${JSON.stringify(examData)}. Prioritize the weakest chapters and subjects. Break it down by day and suggest specific practice strategies for V.QB, GST QB, and PH EXAM types. Refer to me by my name in the response.`;
 
       const response = await ai.models.generateContent({
         model,

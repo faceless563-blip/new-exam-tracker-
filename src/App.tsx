@@ -533,6 +533,18 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Personalized Greeting */}
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+            Welcome back, <span className="text-brand-600">{userName?.split(' ')[0]}</span>!
+          </h2>
+          <p className="text-slate-500 font-medium mt-1">Ready to conquer your GST goals today?</p>
+        </motion.div>
+
         {/* Section Toggle */}
         <div className="flex items-center gap-4 mb-8 bg-white p-1.5 rounded-2xl border border-slate-200 w-fit shadow-sm">
           <button
@@ -651,7 +663,7 @@ export default function App() {
                   </div>
                 )}
 
-                <AIStudyBuddy exams={exams} />
+                <AIStudyBuddy exams={exams} userName={userName || 'Student'} />
                 
                 <ChapterReportCard performance={analysis.formattedExamTypePerformance} />
               </div>
