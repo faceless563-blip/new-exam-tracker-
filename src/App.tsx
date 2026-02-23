@@ -140,6 +140,13 @@ export default function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  const cycleTheme = () => {
+    const themes: Theme[] = ['light', 'dark', 'midnight', 'forest', 'cyberpunk'];
+    const currentIndex = themes.indexOf(theme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex]);
+  };
+
   const handleSaveExam = (examData: Omit<Exam, 'id'> & { id?: string }) => {
     if (examData.id) {
       setExams(exams.map(e => e.id === examData.id ? { ...examData, id: e.id } as Exam : e));
@@ -487,6 +494,14 @@ export default function App() {
               />
             </div>
             
+            <button 
+              onClick={cycleTheme}
+              className="p-2.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all"
+              title="Cycle Theme"
+            >
+              <Palette size={20} />
+            </button>
+
             <button 
               onClick={() => setActiveSection('profile')}
               className={cn(
@@ -860,6 +875,36 @@ export default function App() {
                         </p>
                         <p className="text-[10px] font-bold opacity-60 uppercase tracking-tighter">Syllabus Done</p>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Palette size={18} className="text-brand-600" />
+                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Appearance</h3>
+                    </div>
+                    <div className="grid grid-cols-5 gap-3">
+                      {[
+                        { id: 'light', icon: Sun, label: 'Light' },
+                        { id: 'dark', icon: Moon, label: 'Dark' },
+                        { id: 'midnight', icon: Sparkles, label: 'Night' },
+                        { id: 'forest', icon: Palette, label: 'Forest' },
+                        { id: 'cyberpunk', icon: Zap, label: 'Cyber' },
+                      ].map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => setTheme(t.id as Theme)}
+                          className={cn(
+                            "flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all",
+                            theme === t.id 
+                              ? "bg-brand-50 border-brand-600 text-brand-600 shadow-sm" 
+                              : "bg-slate-50 border-transparent text-slate-400 hover:border-slate-200 hover:text-slate-600"
+                          )}
+                        >
+                          <t.icon size={20} />
+                          <span className="text-[10px] font-black uppercase tracking-tighter">{t.label}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
