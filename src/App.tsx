@@ -15,6 +15,7 @@ import {
   TrendingUp, 
   Calendar as CalendarIcon,
   CheckCircle,
+  CheckCircle2,
   Clock,
   AlertCircle,
   Palette,
@@ -123,7 +124,7 @@ export default function App() {
   const [filterStatus, setFilterStatus] = useState<ExamStatus | 'ALL'>('ALL');
   const [filterType, setFilterType] = useState<ExamType | 'ALL'>('ALL');
   const [undoState, setUndoState] = useState<{ exams: Exam[], message: string } | null>(null);
-  const [activeSection, setActiveSection] = useState<'home' | 'exams' | 'curriculum' | 'timer' | 'profile'>('home');
+  const [activeSection, setActiveSection] = useState<'home' | 'exams' | 'curriculum' | 'timer' | 'mission' | 'profile'>('home');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -549,6 +550,16 @@ export default function App() {
                     Study Timer
                   </button>
                   <button
+                    onClick={() => { setActiveSection('mission'); setIsMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all",
+                      activeSection === 'mission' ? "bg-brand-50 text-brand-600" : "text-slate-600 hover:bg-slate-50"
+                    )}
+                  >
+                    <Target size={20} />
+                    Mission
+                  </button>
+                  <button
                     onClick={() => { setActiveSection('profile'); setIsMenuOpen(false); }}
                     className={cn(
                       "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all",
@@ -933,6 +944,25 @@ export default function App() {
                 progress={chapterProgress}
                 onToggleTask={handleToggleTask}
               />
+            </motion.div>
+          ) : activeSection === 'mission' ? (
+            <motion.div
+              key="mission"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="max-w-4xl mx-auto"
+            >
+              <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl shadow-slate-200 border border-slate-100 text-center">
+                <div className="w-24 h-24 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Target className="text-brand-600" size={48} />
+                </div>
+                <h2 className="text-4xl font-black text-slate-900 tracking-tight mb-4">Mission GST 2026</h2>
+                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-12 mt-8">
+                  <h3 className="text-2xl font-bold text-slate-700 mb-2">Page Under Construction</h3>
+                  <p className="text-slate-500">We are working hard to bring you this feature. We will notify you once it's ready!</p>
+                </div>
+              </div>
             </motion.div>
           ) : (
             <motion.div 

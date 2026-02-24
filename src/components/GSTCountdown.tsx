@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Calendar, Target, Zap, AlertCircle, CheckCircle2, TrendingUp, Clock, RefreshCw } from 'lucide-react';
-import { differenceInDays, format, parseISO, isAfter } from 'date-fns';
+import { differenceInDays, format, parseISO, isAfter, differenceInMilliseconds } from 'date-fns';
 import { ChapterProgress, Exam, ExamStatus } from '../types';
 import { NCTB_CURRICULUM } from '../constants';
 import { cn } from '../lib/utils';
@@ -12,11 +12,31 @@ interface GSTCountdownProps {
 }
 
 export const GSTCountdown: React.FC<GSTCountdownProps> = ({ progress, exams }) => {
-  const targetDate = new Date('2026-04-10');
-  const today = new Date();
+  const targetDate = useMemo(() => new Date('2026-04-10T10:00:00'), []);
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
   
-  const daysLeft = differenceInDays(targetDate, today);
-  const currentDateFormatted = format(today, 'MMMM d, yyyy');
+  const daysLeft = differenceInDays(targetDate, now);
+  
+  const timeRemaining = useMemo(() => {
+    const diff = differenceInMilliseconds(targetDate, now);
+    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    return { days, hours, minutes, seconds };
+  }, [targetDate, now]);
+
+  const currentDateFormatted = format(now, 'MMMM d, yyyy');
   const targetDateFormatted = format(targetDate, 'MMMM d, yyyy');
   
   const totalChapters = useMemo(() => {
@@ -120,12 +140,37 @@ export const GSTCountdown: React.FC<GSTCountdownProps> = ({ progress, exams }) =
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <div>
-              <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Countdown</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-6xl font-black tracking-tighter text-brand-400">{daysLeft}</span>
-                <span className="text-xl font-bold text-white/60">Days Left</span>
+              <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-3">Time Remaining</p>
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col items-center">
+                  <span className="text-4xl md:text-5xl font-black tracking-tighter text-brand-400 w-16 text-center">
+                    {timeRemaining.days.toString().padStart(2, '0')}
+                  </span>
+                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Days</span>
+                </div>
+                <span className="text-2xl font-black text-white/20 -mt-4">:</span>
+                <div className="flex flex-col items-center">
+                  <span className="text-4xl md:text-5xl font-black tracking-tighter text-white w-16 text-center">
+                    {timeRemaining.hours.toString().padStart(2, '0')}
+                  </span>
+                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Hours</span>
+                </div>
+                <span className="text-2xl font-black text-white/20 -mt-4">:</span>
+                <div className="flex flex-col items-center">
+                  <span className="text-4xl md:text-5xl font-black tracking-tighter text-white w-16 text-center">
+                    {timeRemaining.minutes.toString().padStart(2, '0')}
+                  </span>
+                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Mins</span>
+                </div>
+                <span className="text-2xl font-black text-white/20 -mt-4">:</span>
+                <div className="flex flex-col items-center">
+                  <span className="text-4xl md:text-5xl font-black tracking-tighter text-brand-400 w-16 text-center">
+                    {timeRemaining.seconds.toString().padStart(2, '0')}
+                  </span>
+                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-1">Secs</span>
+                </div>
               </div>
             </div>
             <div className="flex flex-col justify-end">
@@ -222,8 +267,8 @@ export const GSTCountdown: React.FC<GSTCountdownProps> = ({ progress, exams }) =
         <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
           {milestones.map((m, i) => {
             const mDate = new Date(m.date);
-            const isPast = isAfter(today, mDate);
-            const isToday = format(today, 'yyyy-MM-dd') === m.date;
+            const isPast = isAfter(now, mDate);
+            const isToday = format(now, 'yyyy-MM-dd') === m.date;
             
             return (
               <div key={i} className={cn(
