@@ -60,10 +60,22 @@ export const NCTB_CURRICULUM = {
     "Math 2nd: Statics",
     "Math 2nd: Dynamics",
     "Math 2nd: Probability"
+  ],
+  English: [
+    "English 1st: Comprehension",
+    "English 1st: Vocabulary",
+    "English 1st: Cloze Test",
+    "English 2nd: Parts of Speech",
+    "English 2nd: Tense and Right Form of Verbs",
+    "English 2nd: Subject-Verb Agreement",
+    "English 2nd: Prepositions",
+    "English 2nd: Voice Change",
+    "English 2nd: Narration",
+    "English 2nd: Transformation of Sentences"
   ]
 };
 
-export const SUBJECTS = ['Physics', 'Chemistry', 'Mathematics'] as const;
+export const SUBJECTS = ['Physics', 'Chemistry', 'Mathematics', 'English'] as const;
 
 export const PAPER_FINALS = [
   'Physics 1st Paper',

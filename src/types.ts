@@ -56,6 +56,12 @@ export interface StudySession {
   notes?: string;
 }
 
+export interface DailyStudyRecord {
+  total: number;
+  subjects: Record<string, number>;
+  chapters: Record<string, number>;
+}
+
 export interface ChapterProgress {
   subject: string;
   chapterName: string;

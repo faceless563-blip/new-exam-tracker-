@@ -26,10 +26,12 @@ import {
   User,
   Target,
   Hash,
-  Trophy
+  Trophy,
+  MoreVertical,
+  X
 } from 'lucide-react';
 import { Auth } from './components/Auth';
-import { Exam, ExamStatus, ExamType, ChapterProgress } from './types';
+import { Exam, ExamStatus, ExamType, ChapterProgress, DailyStudyRecord } from './types';
 import { ExamCard } from './components/ExamCard';
 import { ExamForm } from './components/ExamForm';
 import { AIStudyBuddy } from './components/AIStudyBuddy';
@@ -40,6 +42,7 @@ import { ProgressTracker } from './components/ProgressTracker';
 import { CurriculumTracker } from './components/CurriculumTracker';
 import { GSTCountdown } from './components/GSTCountdown';
 import { RevisionReminders } from './components/RevisionReminders';
+import { StudyTimer } from './components/StudyTimer';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import { format, isAfter, isBefore, startOfDay, addDays } from 'date-fns';
@@ -61,14 +64,20 @@ export default function App() {
     const saved = localStorage.getItem(`progress_${rollNumber}`);
     return saved ? JSON.parse(saved) : [];
   });
+  const [dailyStudyTime, setDailyStudyTime] = useState<Record<string, DailyStudyRecord>>(() => {
+    const saved = localStorage.getItem(`studyTime_${rollNumber}`);
+    return saved ? JSON.parse(saved) : {};
+  });
 
   // Load data when roll number changes
   useEffect(() => {
     if (rollNumber) {
       const savedExams = localStorage.getItem(`exams_${rollNumber}`);
       const savedProgress = localStorage.getItem(`progress_${rollNumber}`);
+      const savedStudyTime = localStorage.getItem(`studyTime_${rollNumber}`);
       setExams(savedExams ? JSON.parse(savedExams) : []);
       setChapterProgress(savedProgress ? JSON.parse(savedProgress) : []);
+      setDailyStudyTime(savedStudyTime ? JSON.parse(savedStudyTime) : {});
     }
   }, [rollNumber]);
 
@@ -77,8 +86,9 @@ export default function App() {
     if (rollNumber) {
       localStorage.setItem(`exams_${rollNumber}`, JSON.stringify(exams));
       localStorage.setItem(`progress_${rollNumber}`, JSON.stringify(chapterProgress));
+      localStorage.setItem(`studyTime_${rollNumber}`, JSON.stringify(dailyStudyTime));
     }
-  }, [exams, chapterProgress, rollNumber]);
+  }, [exams, chapterProgress, dailyStudyTime, rollNumber]);
 
   const handleLogin = (roll: string, name: string, phone: string, remember: boolean) => {
     setRollNumber(roll);
@@ -100,6 +110,7 @@ export default function App() {
     localStorage.removeItem('userPhone');
     setExams([]);
     setChapterProgress([]);
+    setDailyStudyTime({});
   };
 
   const [theme, setTheme] = useState<Theme>(() => {
@@ -112,7 +123,8 @@ export default function App() {
   const [filterStatus, setFilterStatus] = useState<ExamStatus | 'ALL'>('ALL');
   const [filterType, setFilterType] = useState<ExamType | 'ALL'>('ALL');
   const [undoState, setUndoState] = useState<{ exams: Exam[], message: string } | null>(null);
-  const [activeSection, setActiveSection] = useState<'exams' | 'curriculum' | 'profile'>('exams');
+  const [activeSection, setActiveSection] = useState<'home' | 'exams' | 'curriculum' | 'timer' | 'profile'>('home');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     if (undoState) {
@@ -461,10 +473,117 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 transition-colors duration-300">
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMenuOpen(false)}
+              className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40"
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
+              className="fixed top-0 left-0 bottom-0 w-80 bg-white shadow-2xl z-50 flex flex-col"
+            >
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-200">
+                    <Target className="text-white" size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 tracking-tight">GST FIGHT</h2>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMenuOpen(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              <div className="p-4 flex-1 overflow-y-auto">
+                <div className="space-y-2">
+                  <button
+                    onClick={() => { setActiveSection('home'); setIsMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all",
+                      activeSection === 'home' ? "bg-brand-50 text-brand-600" : "text-slate-600 hover:bg-slate-50"
+                    )}
+                  >
+                    <LayoutGrid size={20} />
+                    Home
+                  </button>
+                  <button
+                    onClick={() => { setActiveSection('exams'); setIsMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all",
+                      activeSection === 'exams' ? "bg-brand-50 text-brand-600" : "text-slate-600 hover:bg-slate-50"
+                    )}
+                  >
+                    <GraduationCap size={20} />
+                    Exam Section
+                  </button>
+                  <button
+                    onClick={() => { setActiveSection('curriculum'); setIsMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all",
+                      activeSection === 'curriculum' ? "bg-brand-50 text-brand-600" : "text-slate-600 hover:bg-slate-50"
+                    )}
+                  >
+                    <BookOpen size={20} />
+                    Curriculum Tracker
+                  </button>
+                  <button
+                    onClick={() => { setActiveSection('timer'); setIsMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all",
+                      activeSection === 'timer' ? "bg-brand-50 text-brand-600" : "text-slate-600 hover:bg-slate-50"
+                    )}
+                  >
+                    <Clock size={20} />
+                    Study Timer
+                  </button>
+                  <button
+                    onClick={() => { setActiveSection('profile'); setIsMenuOpen(false); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all",
+                      activeSection === 'profile' ? "bg-brand-50 text-brand-600" : "text-slate-600 hover:bg-slate-50"
+                    )}
+                  >
+                    <User size={20} />
+                    Profile
+                  </button>
+                </div>
+              </div>
+              <div className="p-6 border-t border-slate-100">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-rose-600 hover:bg-rose-50 transition-all"
+                >
+                  <LogOut size={20} />
+                  Logout
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsMenuOpen(true)}
+              className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            >
+              <MoreVertical size={24} />
+            </button>
             <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-200">
               <Target className="text-white" size={24} />
             </div>
@@ -520,84 +639,63 @@ export default function App() {
             >
               <LogOut size={20} />
             </button>
-
-            <button 
-              onClick={() => setIsFormOpen(true)}
-              className="bg-slate-900 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-slate-800 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-slate-200"
-            >
-              <Plus size={20} />
-              <span className="hidden sm:inline">Add Record</span>
-            </button>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Personalized Greeting */}
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-            Welcome back, <span className="text-brand-600">{userName?.split(' ')[0]}</span>!
-          </h2>
-          <p className="text-slate-500 font-medium mt-1">Ready to conquer your GST goals today?</p>
-        </motion.div>
-
-        {/* Section Toggle */}
-        <div className="flex items-center gap-4 mb-8 bg-white p-1.5 rounded-2xl border border-slate-200 w-fit shadow-sm">
-          <button
-            onClick={() => setActiveSection('exams')}
-            className={cn(
-              "px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 active:scale-95",
-              activeSection === 'exams' 
-                ? "bg-slate-900 text-white shadow-lg" 
-                : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-            )}
-          >
-            <GraduationCap size={18} />
-            Exam Section
-          </button>
-          <button
-            onClick={() => setActiveSection('curriculum')}
-            className={cn(
-              "px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 active:scale-95",
-              activeSection === 'curriculum' 
-                ? "bg-brand-600 text-white shadow-lg shadow-brand-100" 
-                : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-            )}
-          >
-            <BookOpen size={18} />
-            Curriculum Tracker
-          </button>
-          <button
-            onClick={() => setActiveSection('profile')}
-            className={cn(
-              "px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2 active:scale-95",
-              activeSection === 'profile' 
-                ? "bg-brand-600 text-white shadow-lg shadow-brand-100" 
-                : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-            )}
-          >
-            <User size={18} />
-            Profile
-          </button>
-        </div>
-
         <AnimatePresence mode="wait">
-          {activeSection === 'exams' ? (
+          {activeSection === 'home' ? (
+            <motion.div
+              key="home"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="space-y-8"
+            >
+              <div className="mb-8">
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+                  Welcome back, <span className="text-brand-600">{userName?.split(' ')[0]}</span>!
+                </h2>
+                <p className="text-slate-500 font-medium mt-1">Ready to conquer your GST goals today?</p>
+              </div>
+              <GSTCountdown progress={chapterProgress} exams={exams} />
+            </motion.div>
+          ) : activeSection === 'timer' ? (
+            <motion.div
+              key="timer"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+            >
+              <StudyTimer 
+                dailyStudyTime={dailyStudyTime} 
+                onUpdateStudyTime={(date, record) => {
+                  setDailyStudyTime(prev => ({ ...prev, [date]: record }));
+                }} 
+              />
+            </motion.div>
+          ) : activeSection === 'exams' ? (
             <motion.div 
               key="exams"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+              className="space-y-8"
             >
-              {/* Left Column: Stats & AI */}
-              <div className="lg:col-span-4 space-y-8">
-                <GSTCountdown progress={chapterProgress} exams={exams} />
-
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Exam Section</h2>
+                <button 
+                  onClick={() => setIsFormOpen(true)}
+                  className="bg-slate-900 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-slate-800 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-slate-200"
+                >
+                  <Plus size={20} />
+                  <span className="hidden sm:inline">Add Record</span>
+                </button>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                {/* Left Column: Stats & AI */}
+                <div className="lg:col-span-4 space-y-8">
                 <RevisionReminders 
                   progress={chapterProgress} 
                   exams={exams} 
@@ -670,6 +768,9 @@ export default function App() {
 
               {/* Right Column: Exam List */}
               <div className="lg:col-span-8 space-y-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-black text-slate-900">Exam Records</h2>
+                </div>
                 <ProgressTracker 
                   overallPercentage={stats.overallPercentage}
                   subjectProgress={stats.subjectProgress}
@@ -817,6 +918,7 @@ export default function App() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+              </div>
               </div>
             </motion.div>
           ) : activeSection === 'curriculum' ? (
