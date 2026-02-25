@@ -97,7 +97,7 @@ export const GSTCountdown: React.FC<GSTCountdownProps> = ({ progress, exams }) =
   const isOnTrack = completionPct >= 20; // Adjusted threshold since we count tasks now
 
   const milestones = [
-    { date: '2026-02-22', label: 'Current Status', icon: Clock, color: 'text-brand-500' },
+    { date: format(now, 'yyyy-MM-dd'), label: 'Current Status', icon: Clock, color: 'text-brand-500' },
     { date: '2026-03-01', label: 'Physics Mastery', icon: Zap, color: 'text-amber-500' },
     { date: '2026-03-15', label: 'Chemistry Final', icon: CheckCircle2, color: 'text-emerald-500' },
     { date: '2026-04-01', label: 'Final Revision', icon: RefreshCw, color: 'text-blue-500' },

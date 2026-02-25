@@ -44,6 +44,7 @@ import { CurriculumTracker } from './components/CurriculumTracker';
 import { GSTCountdown } from './components/GSTCountdown';
 import { RevisionReminders } from './components/RevisionReminders';
 import { StudyTimer } from './components/StudyTimer';
+import { MissionSection, MissionConfig } from './components/MissionSection';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
 import { format, isAfter, isBefore, startOfDay, addDays } from 'date-fns';
@@ -69,6 +70,10 @@ export default function App() {
     const saved = localStorage.getItem(`studyTime_${rollNumber}`);
     return saved ? JSON.parse(saved) : {};
   });
+  const [missionConfig, setMissionConfig] = useState<MissionConfig | null>(() => {
+    const saved = localStorage.getItem(`mission_${rollNumber}`);
+    return saved ? JSON.parse(saved) : null;
+  });
 
   // Load data when roll number changes
   useEffect(() => {
@@ -76,9 +81,11 @@ export default function App() {
       const savedExams = localStorage.getItem(`exams_${rollNumber}`);
       const savedProgress = localStorage.getItem(`progress_${rollNumber}`);
       const savedStudyTime = localStorage.getItem(`studyTime_${rollNumber}`);
+      const savedMission = localStorage.getItem(`mission_${rollNumber}`);
       setExams(savedExams ? JSON.parse(savedExams) : []);
       setChapterProgress(savedProgress ? JSON.parse(savedProgress) : []);
       setDailyStudyTime(savedStudyTime ? JSON.parse(savedStudyTime) : {});
+      setMissionConfig(savedMission ? JSON.parse(savedMission) : null);
     }
   }, [rollNumber]);
 
@@ -88,8 +95,9 @@ export default function App() {
       localStorage.setItem(`exams_${rollNumber}`, JSON.stringify(exams));
       localStorage.setItem(`progress_${rollNumber}`, JSON.stringify(chapterProgress));
       localStorage.setItem(`studyTime_${rollNumber}`, JSON.stringify(dailyStudyTime));
+      localStorage.setItem(`mission_${rollNumber}`, JSON.stringify(missionConfig));
     }
-  }, [exams, chapterProgress, dailyStudyTime, rollNumber]);
+  }, [exams, chapterProgress, dailyStudyTime, missionConfig, rollNumber]);
 
   const handleLogin = (roll: string, name: string, phone: string, remember: boolean) => {
     setRollNumber(roll);
@@ -112,6 +120,7 @@ export default function App() {
     setExams([]);
     setChapterProgress([]);
     setDailyStudyTime({});
+    setMissionConfig(null);
   };
 
   const [theme, setTheme] = useState<Theme>(() => {
@@ -460,13 +469,50 @@ export default function App() {
     return { weakSubjects, weakChapters, subjectGrades, formattedExamTypePerformance };
   }, [exams]);
 
-  const themes: { id: Theme; icon: any; label: string }[] = [
+const themes: { id: Theme; icon: any; label: string }[] = [
     { id: 'light', icon: Sun, label: 'Light' },
     { id: 'dark', icon: Moon, label: 'Dark' },
     { id: 'midnight', icon: Zap, label: 'Midnight' },
     { id: 'forest', icon: Palette, label: 'Forest' },
     { id: 'cyberpunk', icon: Sparkles, label: 'Cyber' },
   ];
+
+  const MOTIVATIONAL_QUOTES = [
+    "The main problem is that you think you have time",
+    "The pain of discipline is way better than the pain of regret",
+    "GST is the last chance you have for a better future, you gotta nail it to secure a better future for you and your family",
+    "Just do it",
+    "Krishna said work hard, that's all you have to do, do not think about the outcome that the thing only God himself will decide",
+    "Just pray and grind hard"
+  ];
+
+  const MotivationalQuotes = () => {
+    const [index, setIndex] = useState(0);
+
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setIndex((prev) => (prev + 1) % MOTIVATIONAL_QUOTES.length);
+      }, 6000);
+      return () => clearInterval(interval);
+    }, []);
+
+    return (
+      <div className="h-32 flex items-center justify-center text-center px-6 bg-white/40 backdrop-blur-sm rounded-[2rem] border border-white/20 shadow-inner mb-8 overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={index}
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="text-lg md:text-xl font-black text-slate-800 italic leading-relaxed max-w-3xl"
+          >
+            "{MOTIVATIONAL_QUOTES[index]}"
+          </motion.p>
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   if (!rollNumber) {
     return <Auth onLogin={handleLogin} />;
@@ -492,7 +538,10 @@ export default function App() {
               className="fixed top-0 left-0 bottom-0 w-80 bg-white shadow-2xl z-50 flex flex-col"
             >
               <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div 
+                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => { setActiveSection('home'); setIsMenuOpen(false); }}
+                >
                   <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-200">
                     <Target className="text-white" size={24} />
                   </div>
@@ -595,12 +644,17 @@ export default function App() {
             >
               <MoreVertical size={24} />
             </button>
-            <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-200">
-              <Target className="text-white" size={24} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">GST FIGHT</h1>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">by soumya</p>
+            <div 
+              className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => setActiveSection('home')}
+            >
+              <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-200">
+                <Target className="text-white" size={24} />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">GST FIGHT</h1>
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">by soumya</p>
+              </div>
             </div>
           </div>
 
@@ -670,6 +724,7 @@ export default function App() {
                 </h2>
                 <p className="text-slate-500 font-medium mt-1">Ready to conquer your GST goals today?</p>
               </div>
+              <MotivationalQuotes />
               <GSTCountdown progress={chapterProgress} exams={exams} />
             </motion.div>
           ) : activeSection === 'timer' ? (
@@ -946,24 +1001,11 @@ export default function App() {
               />
             </motion.div>
           ) : activeSection === 'mission' ? (
-            <motion.div
-              key="mission"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="max-w-4xl mx-auto"
-            >
-              <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl shadow-slate-200 border border-slate-100 text-center">
-                <div className="w-24 h-24 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Target className="text-brand-600" size={48} />
-                </div>
-                <h2 className="text-4xl font-black text-slate-900 tracking-tight mb-4">Mission GST 2026</h2>
-                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-12 mt-8">
-                  <h3 className="text-2xl font-bold text-slate-700 mb-2">Page Under Construction</h3>
-                  <p className="text-slate-500">We are working hard to bring you this feature. We will notify you once it's ready!</p>
-                </div>
-              </div>
-            </motion.div>
+            <MissionSection 
+              missionConfig={missionConfig}
+              setMissionConfig={setMissionConfig}
+              dailyStudyTime={dailyStudyTime}
+            />
           ) : (
             <motion.div 
               key="profile"
